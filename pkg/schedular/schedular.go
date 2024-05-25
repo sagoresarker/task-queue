@@ -17,14 +17,14 @@ import (
 )
 
 type CommandRequest struct {
-	Command    string `json:"command"`
-	ScheduleAt string `json:"schedule_at"`
+	Command     string `json:"command"`
+	ScheduledAt string `json:"scheduled_at"`
 }
 
 type Task struct {
 	Id          string
 	Command     string
-	ScheduleAt  pgtype.Timestamp
+	ScheduledAt pgtype.Timestamp
 	PickedAt    pgtype.Timestamp
 	StartedAt   pgtype.Timestamp
 	CompletedAt pgtype.Timestamp
@@ -82,60 +82,54 @@ func (s *SchedularServer) Start() error {
 }
 
 func (s *SchedularServer) handleScheduleTask(w http.ResponseWriter, r *http.Request) {
-	// handle schedule task
 
 	if r.Method != "POST" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// decode request body
+	// Decode the JSON body
 	var commandReq CommandRequest
 	if err := json.NewDecoder(r.Body).Decode(&commandReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Received schedule task request: %+v\n", commandReq)
+	log.Printf("Received schedule request: %+v", commandReq)
 
-	// parse schedule time
-
-	scheduledTime, err := time.Parse(time.RFC3339, commandReq.ScheduleAt)
+	// Parse the scheduled_at time
+	scheduledTime, err := time.Parse(time.RFC3339, commandReq.ScheduledAt)
 	if err != nil {
-		http.Error(w, "Invalid schedule time", http.StatusBadRequest)
+		http.Error(w, "Invalid date format. Use ISO 8601 format.", http.StatusBadRequest)
+
 		return
 	}
 
-	log.Printf("Parsed schedule time: %s\n", scheduledTime)
+	// Convert the scheduled time to Unix timestamp
+	unixTimestamp := time.Unix(scheduledTime.Unix(), 0)
 
-	// convert the schedule time to UNIX timestamp
-	unixTimeStamp := time.Unix(scheduledTime.Unix(), 0)
+	taskId, err := s.insertTaskIntoDB(context.Background(), Task{Command: commandReq.Command, ScheduledAt: pgtype.Timestamp{Time: unixTimestamp}})
 
-	taskId, err := s.insertTaskIntoDB(context.Background(), Task{
-		Command: commandReq.Command,
-		ScheduleAt: pgtype.Timestamp{
-			Time: unixTimeStamp,
-		}})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to submit task. Error: %s", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to submit task. Error: %s", err.Error()),
+			http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Task scheduled successfully with id: %s\n", taskId)
-
+	// Respond with the parsed data (for demonstration purposes)
 	response := struct {
-		Command    string `json:"command"`
-		ScheduleAt string `json:"schedule_at"`
-		TaskId     string `json:"task_id"`
+		Command     string `json:"command"`
+		ScheduledAt int64  `json:"scheduled_at"`
+		TaskID      string `json:"task_id"`
 	}{
-		Command:    commandReq.Command,
-		ScheduleAt: commandReq.ScheduleAt,
-		TaskId:     taskId,
+		Command:     commandReq.Command,
+		ScheduledAt: unixTimestamp.Unix(),
+		TaskID:      taskId,
 	}
 
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -160,7 +154,7 @@ func (s *SchedularServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Req
 
 	// query the database to get the task status
 	var task Task
-	err := s.dbPool.QueryRow(context.Background(), "SELECT * FROM tasks WHERE id = $1", taskId).Scan(&task.Id, &task.Command, &task.ScheduleAt, &task.PickedAt, &task.StartedAt, &task.CompletedAt, &task.FailedAt)
+	err := s.dbPool.QueryRow(context.Background(), "SELECT * FROM tasks WHERE id = $1", taskId).Scan(&task.Id, &task.Command, &task.ScheduledAt, &task.PickedAt, &task.StartedAt, &task.CompletedAt, &task.FailedAt)
 	if err != nil {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
@@ -169,7 +163,7 @@ func (s *SchedularServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Req
 	response := struct {
 		TaskId      string `json:"task_id"`
 		Command     string `json:"command"`
-		ScheduleAt  string `json:"schedule_at"`
+		ScheduledAt string `json:"schedule_at"`
 		PickedAt    string `json:"picked_at"`
 		StartedAt   string `json:"started_at"`
 		CompletedAt string `json:"completed_at"`
@@ -177,7 +171,7 @@ func (s *SchedularServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Req
 	}{
 		TaskId:      task.Id,
 		Command:     task.Command,
-		ScheduleAt:  "",
+		ScheduledAt: "",
 		PickedAt:    "",
 		StartedAt:   "",
 		CompletedAt: "",
@@ -185,8 +179,8 @@ func (s *SchedularServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Req
 	}
 
 	// set the schedule time if it is not null
-	if task.ScheduleAt.Status == 2 {
-		response.ScheduleAt = task.ScheduleAt.Time.String()
+	if task.ScheduledAt.Status == 2 {
+		response.ScheduledAt = task.ScheduledAt.Time.String()
 	}
 
 	// set the picked time if it is not null
@@ -247,7 +241,7 @@ func (s *SchedularServer) Stop() error {
 
 func (s *SchedularServer) insertTaskIntoDB(ctx context.Context, task Task) (string, error) {
 	var taskId string
-	err := s.dbPool.QueryRow(ctx, "INSERT INTO tasks (command, schedule_at) VALUES ($1, $2) RETURNING id", task.Command, task.ScheduleAt).Scan(&taskId)
+	err := s.dbPool.QueryRow(ctx, "INSERT INTO tasks (command, scheduled_at) VALUES ($1, $2) RETURNING id", task.Command, task.ScheduledAt).Scan(&taskId)
 	if err != nil {
 		return "", err
 	}
