@@ -168,7 +168,7 @@ func (s *CoordinatorServer) UpdateTaskStatus(ctx context.Context, req *pb.Update
 	case pb.TaskStatus_STARTED:
 		timestamp = time.Unix(req.GetStartedAt(), 0)
 		column = "started_at"
-	case pb.TaskStatus_COMPLETE:
+	case pb.TaskStatus_COMPLETED:
 		timestamp = time.Unix(req.GetCompletedAt(), 0)
 		column = "completed_at"
 	case pb.TaskStatus_FAILED:

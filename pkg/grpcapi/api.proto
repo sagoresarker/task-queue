@@ -22,7 +22,7 @@ message TaskRequest {
 }
 
 message TaskResponse {
-    TaskStatus status = 1;
+    string task_id = 1;
     string message = 2;
     bool success = 3;
 }
@@ -51,7 +51,7 @@ message HeartbeatRequest {
 }
 
 message HeartbeatResponse {
-    string acknowledged = 1;
+    bool acknowledged = 1;
 }
 
 message UpdateTaskStatusRequest {

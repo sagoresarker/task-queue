@@ -132,7 +132,7 @@ type TaskResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Status  TaskStatus `protobuf:"varint,1,opt,name=status,proto3,enum=grpcapi.TaskStatus" json:"status,omitempty"`
+	TaskId  string `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Message string     `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Success bool       `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
 }
@@ -169,11 +169,11 @@ func (*TaskResponse) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *TaskResponse) GetStatus() TaskStatus {
+func (x *TaskResponse) GetTaskId() string {
 	if x != nil {
-		return x.Status
+		return x.TaskId
 	}
-	return TaskStatus_QUEUED
+	return ""
 }
 
 func (x *TaskResponse) GetMessage() string {
@@ -352,7 +352,7 @@ type HeartbeatResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Acknowledged string `protobuf:"bytes,1,opt,name=acknowledged,proto3" json:"acknowledged,omitempty"`
+	Acknowledged bool `protobuf:"varint,1,opt,name=acknowledged,proto3" json:"acknowledged,omitempty"`
 }
 
 func (x *HeartbeatResponse) Reset() {
@@ -387,11 +387,11 @@ func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
 	return file_api_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *HeartbeatResponse) GetAcknowledged() string {
+func (x *HeartbeatResponse) GetAcknowledged() bool {
 	if x != nil {
 		return x.Acknowledged
 	}
-	return ""
+	return false
 }
 
 type UpdateTaskStatusRequest struct {
