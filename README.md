@@ -5,6 +5,7 @@ This project implements a distributed task queue system using Go. It consists of
 
 ## Dataflow diagram for the Distributed Task Queue System
 ![Dataflow diagram](./docs/images/task-queue-system-dataflow.png)
+*Data flow diagram of Distributed Task Queue System*
 
 ## Components
 1. **Coordinator**: The central component that manages task distribution and tracks execution status.
