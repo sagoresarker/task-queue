@@ -89,8 +89,8 @@ func (w *WorkerServer) connectToCoordinator() error {
 }
 
 func (w *WorkerServer) periodicHeartbeat() {
-	w.wg.Add(1)       // Add this goroutine to the waitgroup.
-	defer w.wg.Done() // Signal this goroutine is done when the function returns
+	w.wg.Add(1)
+	defer w.wg.Done()
 
 	ticker := time.NewTicker(w.heartbeatInterval)
 	defer ticker.Stop()
@@ -111,7 +111,6 @@ func (w *WorkerServer) periodicHeartbeat() {
 func (w *WorkerServer) sendHeartbeat() error {
 	workerAddress := os.Getenv("WORKER_ADDRESS")
 	if workerAddress == "" {
-		// Fall back to using the listener address if WORKER_ADDRESS is not set
 		workerAddress = w.listener.Addr().String()
 	} else {
 		workerAddress += w.serverPort
@@ -162,9 +161,7 @@ func (w *WorkerServer) awaitShutdown() error {
 
 // Stop gracefully shuts down the WorkerServer.
 func (w *WorkerServer) Stop() error {
-	// Signal all goroutines to stop
 	w.cancel()
-	// Wait for all goroutines to finish
 	w.wg.Wait()
 
 	w.closeGRPCConnection()
@@ -215,7 +212,7 @@ func (w *WorkerServer) startWorkerPool(numWorkers int) {
 
 // worker is the function run by each worker goroutine.
 func (w *WorkerServer) worker() {
-	defer w.wg.Done() // Signal this worker is done when the function returns.
+	defer w.wg.Done()
 
 	for {
 		select {

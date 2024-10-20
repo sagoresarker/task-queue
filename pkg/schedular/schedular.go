@@ -69,8 +69,6 @@ func (s *SchedularServer) Start() error {
 
 	log.Printf("Server started at port %s\n", s.serverPort)
 
-	// start server in seperated goroutine
-
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil {
 			log.Printf("Error starting server: %s\n", err)
@@ -88,7 +86,6 @@ func (s *SchedularServer) handleScheduleTask(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Decode the JSON body
 	var commandReq CommandRequest
 	if err := json.NewDecoder(r.Body).Decode(&commandReq); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -97,7 +94,6 @@ func (s *SchedularServer) handleScheduleTask(w http.ResponseWriter, r *http.Requ
 
 	log.Printf("Received schedule request: %+v", commandReq)
 
-	// Parse the scheduled_at time
 	scheduledTime, err := time.Parse(time.RFC3339, commandReq.ScheduledAt)
 	if err != nil {
 		http.Error(w, "Invalid date format. Use ISO 8601 format.", http.StatusBadRequest)
@@ -105,7 +101,6 @@ func (s *SchedularServer) handleScheduleTask(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Convert the scheduled time to Unix timestamp
 	unixTimestamp := time.Unix(scheduledTime.Unix(), 0)
 
 	taskId, err := s.insertTaskIntoDB(context.Background(), Task{Command: commandReq.Command, ScheduledAt: pgtype.Timestamp{Time: unixTimestamp}})
@@ -116,7 +111,6 @@ func (s *SchedularServer) handleScheduleTask(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Respond with the parsed data (for demonstration purposes)
 	response := struct {
 		Command     string `json:"command"`
 		ScheduledAt int64  `json:"scheduled_at"`
@@ -143,7 +137,6 @@ func (s *SchedularServer) handleGetTaskStatus(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// get the task id from the query parameter
 	taskId := r.URL.Query().Get("task_id")
 	if taskId == "" {
 		http.Error(w, "Task id is required", http.StatusBadRequest)
